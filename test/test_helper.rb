@@ -1,6 +1,6 @@
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
-ENV['RAILS_ENV'] = 'test'
+ENV['RAILS_ENV']  =   'test'
 ENV['RAILS_ROOT'] ||= File.dirname(__FILE__) + '/../../../..'
 
 require 'test/unit'
@@ -35,16 +35,19 @@ ActiveRecord::Base.establish_connection(config[db_adapter])
 
 load(File.dirname(__FILE__) + "/schema.rb")
 
-Test::Unit::TestCase.fixture_path = File.dirname(__FILE__) + "/fixtures"
-$LOAD_PATH.unshift(Test::Unit::TestCase.fixture_path)
+class ActiveSupport::TestCase
+  include ActiveRecord::TestFixtures
+end
+ActiveSupport::TestCase.fixture_path = File.dirname(__FILE__) + "/fixtures"
+$LOAD_PATH.unshift(ActiveSupport::TestCase.fixture_path)
 
-class Test::Unit::TestCase #:nodoc:
+class ActiveSupport::TestCase #:nodoc:
   include ActionController::TestProcess
   def create_fixtures(*table_names)
     if block_given?
-      Fixtures.create_fixtures(Test::Unit::TestCase.fixture_path, table_names) { yield }
+      Fixtures.create_fixtures(ActiveSupport::TestCase.fixture_path, table_names) { yield }
     else
-      Fixtures.create_fixtures(Test::Unit::TestCase.fixture_path, table_names)
+      Fixtures.create_fixtures(ActiveSupport::TestCase.fixture_path, table_names)
     end
   end
 
@@ -81,6 +84,7 @@ class Test::Unit::TestCase #:nodoc:
   protected
     def upload_file(options = {})
       use_temp_file options[:filename] do |file|
+        p attachment_model.name
         att = attachment_model.create :uploaded_data => fixture_file_upload(file, options[:content_type] || 'image/png')
         att.reload unless att.new_record?
         return att
@@ -102,6 +106,10 @@ class Test::Unit::TestCase #:nodoc:
       yield temp_path
     ensure
       FileUtils.rm_rf File.join(fixture_path, 'tmp')
+    end
+    
+    def assert_valid(record, message = "Record was not valid")
+      assert record.valid?, message
     end
 
     def assert_created(num = 1)
